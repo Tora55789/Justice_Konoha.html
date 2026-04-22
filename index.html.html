@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Base de Données Judiciaire - Konoha</title>
+    <style>
+        :root {
+            --bg-color: #e0d8c8;
+            --primary-dark: #3e2723;
+            --primary-light: #5d4037;
+            --accent-red: #b71c1c;
+            --gold: #d4af37;
+            --fiche-bg: #fffbe6;
+            --nav-bg: #2d1a11;
+        }
+
+        body { 
+            background-color: var(--bg-color); 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            color: var(--primary-dark); 
+            margin: 0;
+            background-image: url('https://www.transparenttextures.com/patterns/rice-paper-2.png');
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* NAVBAR */
+        .navbar {
+            background: var(--nav-bg);
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+        .navbar h2 { margin: 0; font-size: 1.2em; color: var(--gold); text-transform: uppercase; letter-spacing: 2px;}
+        .tabs { display: flex; gap: 10px; }
+        .tab-btn {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: white;
+            padding: 8px 15px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .tab-btn.active { background: var(--accent-red); }
+        .tab-btn:hover:not(.active) { background: rgba(255,255,255,0.2); }
+
+        .layout {
+            display: flex;
+            gap: 20px;
+            flex: 1;
+            padding: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        /* VIEWS */
+        .view-section { display: none; width: 100%; height: 100%; }
+        .view-section.active { display: flex; gap: 20px; }
+
+        /* LEFT PANEL - CONTROLS */
+        .controls {
+            flex: 1;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-top: 5px solid var(--primary-light);
+        }
+
+        .controls-header {
+            background: var(--primary-light);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.2em;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .controls-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .form-group { margin-bottom: 15px; }
+
+        label {
+            font-size: 0.85em;
+            text-transform: uppercase;
+            font-weight: bold;
+            color: #666;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: inherit;
+            box-sizing: border-box;
+            background: #fafafa;
+        }
+        textarea { height: 60px; resize: vertical; }
+
+        .infractions-section {
+            margin-top: 20px;
+            border-top: 2px dashed #ccc;
+            padding-top: 20px;
+        }
+
+        .cat-title {
+            background: #eee;
+            padding: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 5px;
+            border-left: 4px solid var(--accent-red);
+            border-radius: 3px;
+        }
+        .cat-title:hover { background: #e0e0e0; }
+
+        .infraction-list {
+            display: none;
+            padding: 5px 10px 15px 10px;
+        }
+        .infraction-list.active { display: block; }
+
+        .inf-item {
+            display: flex;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+        }
+        .inf-item:hover { background: #f9f9f9; }
+        .inf-item input { margin-right: 10px; transform: scale(1.2); }
+        .inf-item span { font-size: 0.9em; }
+        .inf-code { font-weight: bold; color: var(--accent-red); margin-right: 5px; width: 40px; display: inline-block;}
+
+        /* RIGHT PANEL - FICHE */
+        .fiche-container {
+            flex: 1.2;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .fiche {
+            flex: 1;
+            background: var(--fiche-bg);
+            border: 10px solid var(--primary-dark);
+            border-image: url('https://www.transparenttextures.com/patterns/paper-fibers.png') 10 stretch;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border-radius: 5px;
+            overflow-y: auto;
+            position: relative;
+            font-family: 'Georgia', serif;
+        }
+
+        .fiche::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: url('https://www.transparenttextures.com/patterns/aged-paper.png');
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        .fiche-header {
+            text-align: center;
+            border-bottom: 3px double var(--primary-dark);
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+
+        .fiche-header h1 {
+            margin: 0;
+            font-size: 1.8em;
+            color: var(--accent-red);
+            text-transform: uppercase;
+        }
+        .fiche-header p { margin: 5px 0 0 0; font-style: italic; color: #666; }
+
+        .fiche-row { margin-bottom: 15px; }
+        .fiche-row strong { color: var(--primary-light); display: inline-block; width: 150px; text-transform: uppercase; font-size: 0.9em; }
+        .fiche-row span { font-size: 1.1em; }
+
+        .fiche-block { margin-top: 25px; }
+        .fiche-block-title {
+            background: var(--primary-dark);
+            color: white;
+            padding: 5px 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .fiche-text {
+            white-space: pre-wrap;
+            background: rgba(255,255,255,0.5);
+            padding: 10px;
+            border: 1px dashed #ccc;
+            min-height: 40px;
+            font-size: 0.95em;
+        }
+
+        ul.fiche-list { margin: 0; padding-left: 20px; }
+        ul.fiche-list li { margin-bottom: 5px; font-weight: bold; }
+        .peines-list li { color: var(--accent-red); font-size: 1.1em; }
+
+        /* ACTIONS */
+        .actions { display: flex; gap: 10px; }
+        .btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            font-weight: bold;
+            font-size: 1.1em;
+            cursor: pointer;
+            border-radius: 5px;
+            color: white;
+            transition: 0.2s;
+            text-align: center;
+        }
+        .btn-save { background: #2e7d32; }
+        .btn-save:hover { background: #1b5e20; }
+        .btn-copy { background: var(--primary-light); }
+        .btn-copy:hover { background: var(--primary-dark); }
+        .btn-print { background: var(--accent-red); }
+        .btn-print:hover { background: #8e0000; }
+
+        /* ARCHIVES VIEW */
+        .archives-container {
+            width: 100%;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-top: 5px solid var(--primary-light);
+        }
+        
+        .archives-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fafafa;
+        }
+        
+        .archives-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .archive-card {
+            border: 1px solid #e0e0e0;
+            border-left: 5px solid var(--primary-light);
+            border-radius: 5px;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fff;
+            transition: 0.2s;
+        }
+        .archive-card:hover { box-shadow: 0 4px 8px rgba(0,0,0,0.1); transform: translateY(-2px); }
+        
+        .ac-info h3 { margin: 0 0 5px 0; color: var(--primary-dark); }
+        .ac-info p { margin: 0; color: #666; font-size: 0.9em; }
+        .ac-score { 
+            font-weight: bold; 
+            padding: 5px 10px; 
+            border-radius: 20px;
+            font-size: 0.85em;
+        }
+        
+        .score-high { background: #ffebee; color: #c62828; }
+        .score-med { background: #fff3e0; color: #ef6c00; }
+        .score-low { background: #e8f5e9; color: #2e7d32; }
+
+        .ac-actions button {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+        .btn-view { background: var(--primary-light); color: white; }
+        .btn-delete { background: #ffebee; color: #c62828; }
+
+        /* ENQUETES & ARRESTATIONS */
+        .full-panel { width:100%; display:flex; flex-direction:column; gap:20px; overflow-y:auto; }
+        .section-card { background:#fff; border-radius:8px; box-shadow:0 3px 10px rgba(0,0,0,0.1); padding:25px; border-top:5px solid var(--primary-light); }
+        .section-card h3 { margin:0 0 15px 0; color:var(--accent-red); text-transform:uppercase; }
+        .grid-form { display:grid; grid-template-columns:1fr 1fr; gap:15px; }
+        .grid-form .full-width { grid-column: 1 / -1; }
+        .status-badge { padding:4px 10px; border-radius:12px; font-size:0.8em; font-weight:bold; display:inline-block; }
+        .status-open { background:#fff3e0; color:#ef6c00; }
+        .status-closed { background:#e8f5e9; color:#2e7d32; }
+        .status-urgent { background:#ffebee; color:#c62828; }
+        .record-card { border:1px solid #e0e0e0; border-radius:5px; padding:15px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; transition:0.2s; }
+        .record-card:hover { box-shadow:0 3px 8px rgba(0,0,0,0.1); }
+        .record-card h4 { margin:0 0 5px 0; }
+        .record-card p { margin:0; font-size:0.85em; color:#666; }
+        select { width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; font-family:inherit; box-sizing:border-box; background:#fafafa; }
+
+        /* AUTH */
+        .auth-area { display:flex; align-items:center; gap:10px; }
+        .auth-area span { color:var(--gold); font-size:0.9em; }
+        .auth-btn { background:var(--gold); color:var(--nav-bg); border:none; padding:6px 14px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.85em; }
+        .auth-btn:hover { background:#c9a227; }
+        .auth-btn.logout { background:rgba(255,255,255,0.2); color:white; }
+        .modal-overlay { display:none; position:fixed; top:0;left:0;right:0;bottom:0; background:rgba(0,0,0,0.6); z-index:100; justify-content:center; align-items:center; }
+        .modal-overlay.active { display:flex; }
+        .modal { background:#fff; border-radius:10px; padding:30px; width:350px; box-shadow:0 10px 40px rgba(0,0,0,0.4); }
+        .modal h3 { margin:0 0 20px 0; text-align:center; color:var(--accent-red); }
+        .modal input { width:100%; padding:10px; border:1px solid #ccc; border-radius:5px; margin-bottom:12px; box-sizing:border-box; font-family:inherit; }
+        .modal button { width:100%; padding:12px; border:none; border-radius:5px; cursor:pointer; font-weight:bold; margin-bottom:8px; }
+        .modal .btn-primary { background:var(--accent-red); color:white; }
+        .modal .btn-secondary { background:#eee; color:#333; }
+        .modal p { text-align:center; font-size:0.85em; color:#999; margin:10px 0 0 0; }
+
+        @media (max-width: 900px) {
+            body { overflow-y: auto; height: auto; }
+            .layout { flex-direction: column; height: auto; overflow: visible; }
+            .controls { flex: none; min-height: 600px; }
+            .fiche-container { flex: none; min-height: 800px; }
+            .grid-form { grid-template-columns: 1fr; }
+        }
+
+        @media print {
+            body { background: none; height: auto; }
+            .navbar, .controls, .actions { display: none !important; }
+            .layout { padding: 0; height: auto; }
+            .fiche-container { flex: 1; gap: 0; }
+            .fiche { border: none; box-shadow: none; overflow: visible; height: auto; padding: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="navbar">
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <img src="konoha_logo.png" alt="Logo Konoha" style="height: 40px; filter: drop-shadow(0 0 5px rgba(255,165,0,0.5));">
+        <h2>⚖️ Section Judiciaire de Konoha</h2>
+    </div>
+    <div class="tabs">
+        <button class="tab-btn active" id="tab-new">📝 Fiche</button>
+        <button class="tab-btn" id="tab-enquetes">🔍 Enquêtes</button>
+        <button class="tab-btn" id="tab-arrestations">🚔 Arrestations</button>
+        <button class="tab-btn" id="tab-archives">📁 Archives</button>
+    </div>
+    <div class="auth-area" id="auth-area">
+        <button class="auth-btn" id="btn-login">🔑 Connexion</button>
+    </div>
+</div>
+
+<!-- LOGIN MODAL -->
+<div class="modal-overlay" id="modal-login">
+    <div class="modal">
+        <h3>🔑 Connexion</h3>
+        <input type="text" id="login-user" placeholder="Nom d'utilisateur">
+        <input type="password" id="login-pass" placeholder="Mot de passe">
+        <button class="btn-primary" id="btn-do-login">Se connecter</button>
+        <button class="btn-secondary" id="btn-show-register">Créer un compte</button>
+        <button class="btn-secondary" id="btn-close-modal">Annuler</button>
+        <p id="login-error" style="color:#c62828;"></p>
+    </div>
+</div>
+
+<!-- REGISTER MODAL -->
+<div class="modal-overlay" id="modal-register">
+    <div class="modal">
+        <h3>📋 Nouveau Compte (max 5)</h3>
+        <input type="text" id="reg-user" placeholder="Nom d'utilisateur">
+        <input type="password" id="reg-pass" placeholder="Mot de passe">
+        <input type="password" id="reg-pass2" placeholder="Confirmer le mot de passe">
+        <button class="btn-primary" id="btn-do-register">Créer le compte</button>
+        <button class="btn-secondary" id="btn-back-login">Retour</button>
+        <p id="reg-error" style="color:#c62828;"></p>
+        <p id="reg-count"></p>
+    </div>
+</div>
+
+<div class="layout">
+    
+    <!-- VIEW: NEW FICHE -->
+    <div id="view-new" class="view-section active">
+        <!-- GAUCHE : FORMULAIRE RAPIDE -->
+        <div class="controls">
+            <div class="controls-header">Saisie Rapide</div>
+            <div class="controls-body">
+                <div class="form-group">
+                    <label>Accusé(s)</label>
+                    <input type="text" id="accuses" placeholder="Ex: Naruto Uzumaki">
+                </div>
+                <div class="form-group">
+                    <label>Identité / Matricule</label>
+                    <input type="text" id="id" placeholder="Lien photo ou description...">
+                </div>
+                <div class="form-group">
+                    <label>Lieu & Date</label>
+                    <input type="text" id="date" placeholder="Ex: Rues de Konoha, 15 Mars">
+                </div>
+                <div class="form-group">
+                    <label>Faits Reprochés</label>
+                    <textarea id="faits" placeholder="Description chronologique..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Témoins / Preuves</label>
+                    <textarea id="preuves" placeholder="Témoignages, captures, liens..."></textarea>
+                </div>
+
+                <div class="infractions-section">
+                    <label style="font-size: 1.1em; color: var(--accent-red);">⚖️ SÉLECTION DES INFRACTIONS</label>
+                    <div id="infractions-container"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DROITE : LA FICHE VISUELLE -->
+        <div class="fiche-container">
+            <div class="fiche" id="fiche">
+                <div class="fiche-header">
+                    <h1>🛡️ POLICE MILITAIRE DE KONOHA 🛡️</h1>
+                    <p>DOSSIER JUDICIAIRE OFFICIEL</p>
+                </div>
+
+                <div class="fiche-row"><strong>ACCUSÉ(S) :</strong> <span id="f-accuses">N/A</span></div>
+                <div class="fiche-row"><strong>IDENTITÉ :</strong> <span id="f-id">N/A</span></div>
+                <div class="fiche-row"><strong>LIEU / DATE :</strong> <span id="f-date">N/A</span></div>
+
+                <div class="fiche-block">
+                    <div class="fiche-block-title">FAITS REPROCHÉS</div>
+                    <div class="fiche-text" id="f-faits">Aucun fait saisi.</div>
+                </div>
+
+                <div class="fiche-block">
+                    <div class="fiche-block-title">TÉMOINS ET PREUVES</div>
+                    <div class="fiche-text" id="f-preuves">Aucune preuve saisie.</div>
+                </div>
+
+                <div class="fiche-block">
+                    <div class="fiche-block-title">📋 INFRACTIONS RETENUES</div>
+                    <ul class="fiche-list" id="f-infractions">
+                        <li style="color:#999; font-weight:normal;">Aucune infraction sélectionnée.</li>
+                    </ul>
+                </div>
+
+                <div class="fiche-block">
+                    <div class="fiche-block-title" style="background: var(--accent-red);">⚖️ PEINES RECOMMANDÉES (AUTO)</div>
+                    <ul class="fiche-list peines-list" id="f-peines">
+                        <li style="color:#999; font-weight:normal;">Aucune peine calculée.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button class="btn btn-save" id="btn-save">💾 ENREGISTRER</button>
+                <button class="btn btn-copy" id="btn-copy">📋 COPIER</button>
+                <button class="btn btn-print" id="btn-print">🖨️ IMPRIMER</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW: ENQUETES -->
+    <div id="view-enquetes" class="view-section">
+        <div class="full-panel">
+            <div class="section-card">
+                <h3>🔍 Ouvrir une Enquête Judiciaire</h3>
+                <div class="grid-form">
+                    <div><label>Numéro de dossier</label><input type="text" id="eq-numero" placeholder="EQ-001"></div>
+                    <div><label>Date d'ouverture</label><input type="text" id="eq-date" placeholder="Ex: 22 Avril"></div>
+                    <div><label>Enquêteur(s) assigné(s)</label><input type="text" id="eq-enqueteur" placeholder="Nom des enquêteurs..."></div>
+                    <div><label>Priorité</label>
+                        <select id="eq-priorite"><option value="normale">Normale</option><option value="haute">Haute</option><option value="urgente">Urgente</option></select>
+                    </div>
+                    <div class="full-width"><label>Suspect(s)</label><input type="text" id="eq-suspects" placeholder="Noms des suspects..."></div>
+                    <div class="full-width"><label>Objet de l'enquête</label><textarea id="eq-objet" placeholder="Résumé de l'affaire à investiguer..."></textarea></div>
+                    <div class="full-width"><label>Éléments connus / Pistes</label><textarea id="eq-pistes" placeholder="Indices, témoignages préliminaires, lieux..."></textarea></div>
+                    <div class="full-width"><label>Notes d'avancement</label><textarea id="eq-notes" placeholder="Évolution de l'enquête..."></textarea></div>
+                    <div class="full-width">
+                        <button class="btn btn-save" id="btn-save-enquete" style="width:100%;">💾 ENREGISTRER L'ENQUÊTE</button>
+                    </div>
+                </div>
+            </div>
+            <div class="section-card">
+                <h3>📂 Enquêtes en cours</h3>
+                <div id="enquetes-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW: ARRESTATIONS -->
+    <div id="view-arrestations" class="view-section">
+        <div class="full-panel">
+            <div class="section-card">
+                <h3>🚔 Enregistrer une Arrestation</h3>
+                <div class="grid-form">
+                    <div><label>Nom de l'individu arrêté</label><input type="text" id="ar-nom" placeholder="Nom complet..."></div>
+                    <div><label>Date & Heure de l'arrestation</label><input type="text" id="ar-date" placeholder="Ex: 22 Avril, 14h30"></div>
+                    <div><label>Lieu de l'arrestation</label><input type="text" id="ar-lieu" placeholder="Ex: Marché de Konoha"></div>
+                    <div><label>Agent(s) ayant procédé</label><input type="text" id="ar-agents" placeholder="Noms des agents..."></div>
+                    <div><label>Enquête liée (N° dossier)</label><input type="text" id="ar-enquete" placeholder="Ex: EQ-001 ou Aucune"></div>
+                    <div><label>Statut</label>
+                        <select id="ar-statut"><option value="garde_a_vue">Garde à vue</option><option value="cellule">En cellule</option><option value="relache">Relâché</option><option value="transfert">Transféré au Tribunal</option></select>
+                    </div>
+                    <div class="full-width"><label>Motif de l'arrestation</label><textarea id="ar-motif" placeholder="Raison de l'interpellation..."></textarea></div>
+                    <div class="full-width"><label>Objets saisis</label><textarea id="ar-objets" placeholder="Armes, documents, artefacts..."></textarea></div>
+                    <div class="full-width"><label>Rapport de l'intervention</label><textarea id="ar-rapport" placeholder="Déroulement de l'arrestation..."></textarea></div>
+                    <div class="full-width">
+                        <button class="btn btn-print" id="btn-save-arrestation" style="width:100%;">💾 ENREGISTRER L'ARRESTATION</button>
+                    </div>
+                </div>
+            </div>
+            <div class="section-card">
+                <h3>📋 Registre des Arrestations</h3>
+                <div id="arrestations-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW: ARCHIVES -->
+    <div id="view-archives" class="view-section">
+        <div class="full-panel">
+            <!-- ARCHIVES FICHES -->
+            <div class="section-card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h3 style="margin:0;">📝 Archives — Fiches Judiciaires</h3>
+                    <button id="btn-clear-fiches" style="background:var(--accent-red); color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;">Purger les Fiches</button>
+                </div>
+                <div id="archives-fiches-list"></div>
+            </div>
+            <!-- ARCHIVES ENQUETES -->
+            <div class="section-card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h3 style="margin:0;">🔍 Archives — Enquêtes Judiciaires</h3>
+                    <button id="btn-clear-enquetes" style="background:var(--accent-red); color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;">Purger les Enquêtes</button>
+                </div>
+                <div id="archives-enquetes-list"></div>
+            </div>
+            <!-- ARCHIVES ARRESTATIONS -->
+            <div class="section-card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h3 style="margin:0;">🚔 Archives — Arrestations Policières</h3>
+                    <button id="btn-clear-arrestations" style="background:var(--accent-red); color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;">Purger les Arrestations</button>
+                </div>
+                <div id="archives-arrestations-list"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ==================== AUTH SYSTEM ====================
+const MAX_ACCOUNTS = 5;
+let currentUser = localStorage.getItem('konoha_currentUser') || null;
+function getAccounts() { return JSON.parse(localStorage.getItem('konoha_accounts') || '[]'); }
+function saveAccounts(list) { localStorage.setItem('konoha_accounts', JSON.stringify(list)); }
+function updateAuthUI() {
+    const area = document.getElementById('auth-area');
+    if(currentUser) {
+        area.innerHTML = '<span>👤 '+currentUser+'</span><button class="auth-btn logout" id="btn-logout">Déconnexion</button>';
+        document.getElementById('btn-logout').addEventListener('click', () => { currentUser = null; localStorage.removeItem('konoha_currentUser'); updateAuthUI(); });
+    } else {
+        area.innerHTML = '<button class="auth-btn" id="btn-login">🔑 Connexion</button>';
+        document.getElementById('btn-login').addEventListener('click', () => { document.getElementById('modal-login').classList.add('active'); });
+    }
+}
+function requireAuth() {
+    if(!currentUser) { alert("⛔ Vous devez être connecté pour effectuer cette action."); return false; }
+    return true;
+}
+
+// DATA
+const infractionsData = [
+    { cat: "A - CRIMES", items: [
+        { code: "A3.1", name: "Tentative d'assassinat", type: ["detention", "jugement"] },
+        { code: "A3.2", name: "Meurtre", type: ["detention", "jugement"] },
+        { code: "A3.3", name: "Trahison envers le village", type: ["detention", "jugement"] },
+        { code: "A3.4", name: "Désertion", type: ["execution", "traque"] },
+        { code: "A3.5", name: "Affiliation à groupe ennemi", type: ["detention", "jugement"] },
+        { code: "A3.6", name: "Vol de documents", type: ["detention", "jugement"] },
+        { code: "A3.7", name: "Tentative de coup d'État", type: ["detention", "execution"] },
+        { code: "A3.8", name: "Corruption d'un officiel", type: ["detention", "jugement"] },
+        { code: "A3.9", name: "Infiltration d'une unité spéciale", type: ["execution"] }
+    ]},
+    { cat: "B - DÉLITS MAJEURS", items: [
+        { code: "B2.1", name: "Abandon de mission", type: ["signalement", "retrogradation"] },
+        { code: "B2.2", name: "Insubordination", type: ["signalement", "cellule"], cellule: 30, retrogradation_potentiel: true },
+        { code: "B2.3", name: "Mise en danger via non transmission de rapport", type: ["avertissement", "ryos"], ryos: 15000 },
+        { code: "B2.4", name: "Intrusion dans un lieu non autorisé", type: ["cellule", "bandeau"], cellule: 15 },
+        { code: "B2.5", name: "Vol d'art ninja", type: ["detention", "jugement"] },
+        { code: "B2.6", name: "Dégradation de bien publique", type: ["tig", "reparation"] },
+        { code: "B2.7", name: "Vol", type: ["detention", "jugement"] },
+        { code: "B2.8", name: "Usurpation d'identité", type: ["avertissement", "cellule", "tig"], cellule: 15 },
+        { code: "B2.9", name: "Commerce avec un ennemi", type: ["jugement"] },
+        { code: "B2.10", name: "Obstruction à une enquête", type: ["jugement"] },
+        { code: "B2.11", name: "Prise de parole non autorisé", type: ["ryos"], ryos: 7500 },
+        { code: "B2.12", name: "Coups et blessures", type: ["ryos"], ryos: 10000 }
+    ]},
+    { cat: "C - DÉLITS MINEURS", items: [
+        { code: "C1.1", name: "Trouble à l'ordre publique", type: ["avertissement", "ryos", "tig"], ryos: 5000 },
+        { code: "C1.2", name: "Diffamation publique", type: ["avertissement", "ryos"], ryos: 5000 },
+        { code: "C1.3", name: "Harcèlement verbal", type: ["avertissement", "ryos"], ryos: 10000 },
+        { code: "C1.4", name: "Refus d'obtempérer", type: ["avertissement", "ryos"], ryos: 10000 },
+        { code: "C1.5", name: "Vandalisme", type: ["jugement", "amendes_variables"] },
+        { code: "C1.6", name: "Vente illégale", type: ["avertissement", "ryos", "confiscation"], ryos: 10000 },
+        { code: "C1.7", name: "Fausse alerte", type: ["signalement", "cellule", "ryos"], cellule: 20, ryos: 25000 },
+        { code: "C1.8", name: "Jutsu en zone non autorisé", type: ["avertissement", "ryos"], ryos: 5000 },
+        { code: "C1.9", name: "Utilisation non autorisé de terrain d'entrainement", type: ["ryos"], ryos: 5000 },
+        { code: "C1.10", name: "Saut/charge/course de chakra non autorisé", type: ["ryos"], ryos: 5000 },
+        { code: "C1.11", name: "Marche sur les murs et toits", type: ["ryos"], ryos: 7500 },
+        { code: "C1.12", name: "Tenue non conforme", type: ["ryos"], ryos: 4000 },
+        { code: "C1.13", name: "Jeux d'argent", type: ["confiscation", "ryos"], ryos: 7500 }
+    ]}
+];
+
+let currentScore = 0;
+
+document.addEventListener('DOMContentLoaded', () => {
+    // AUTH MODAL LISTENERS
+    document.getElementById('btn-login').addEventListener('click', () => { document.getElementById('modal-login').classList.add('active'); });
+    document.getElementById('btn-close-modal').addEventListener('click', () => { document.getElementById('modal-login').classList.remove('active'); });
+    document.getElementById('btn-show-register').addEventListener('click', () => {
+        document.getElementById('modal-login').classList.remove('active');
+        document.getElementById('modal-register').classList.add('active');
+        document.getElementById('reg-count').innerText = 'Comptes créés : ' + getAccounts().length + ' / ' + MAX_ACCOUNTS;
+        document.getElementById('reg-error').innerText = '';
+    });
+    document.getElementById('btn-back-login').addEventListener('click', () => {
+        document.getElementById('modal-register').classList.remove('active');
+        document.getElementById('modal-login').classList.add('active');
+    });
+    document.getElementById('btn-do-login').addEventListener('click', () => {
+        const user = document.getElementById('login-user').value.trim();
+        const pass = document.getElementById('login-pass').value;
+        const found = getAccounts().find(a => a.user === user && a.pass === pass);
+        if(!found) { document.getElementById('login-error').innerText = '❌ Identifiants incorrects.'; return; }
+        currentUser = user;
+        localStorage.setItem('konoha_currentUser', user);
+        document.getElementById('modal-login').classList.remove('active');
+        document.getElementById('login-user').value = ''; document.getElementById('login-pass').value = '';
+        document.getElementById('login-error').innerText = '';
+        updateAuthUI();
+    });
+    document.getElementById('btn-do-register').addEventListener('click', () => {
+        const user = document.getElementById('reg-user').value.trim();
+        const pass = document.getElementById('reg-pass').value;
+        const pass2 = document.getElementById('reg-pass2').value;
+        if(!user || !pass) { document.getElementById('reg-error').innerText = '❌ Remplissez tous les champs.'; return; }
+        if(pass !== pass2) { document.getElementById('reg-error').innerText = '❌ Mots de passe différents.'; return; }
+        const accounts = getAccounts();
+        if(accounts.length >= MAX_ACCOUNTS) { document.getElementById('reg-error').innerText = '❌ Limite de ' + MAX_ACCOUNTS + ' comptes atteinte.'; return; }
+        if(accounts.find(a => a.user === user)) { document.getElementById('reg-error').innerText = '❌ Nom déjà pris.'; return; }
+        accounts.push({ user, pass });
+        saveAccounts(accounts);
+        document.getElementById('modal-register').classList.remove('active');
+        document.getElementById('reg-user').value = ''; document.getElementById('reg-pass').value = ''; document.getElementById('reg-pass2').value = '';
+        alert('✅ Compte créé ! Connectez-vous.');
+        document.getElementById('modal-login').classList.add('active');
+    });
+    updateAuthUI();
+
+    // 1. NAVIGATION
+    const allTabs = document.querySelectorAll('.tab-btn');
+    const tabMap = {
+        'tab-new': 'new',
+        'tab-enquetes': 'enquetes',
+        'tab-arrestations': 'arrestations',
+        'tab-archives': 'archives'
+    };
+
+    allTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            allTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            const viewName = tabMap[tab.id];
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById('view-' + viewName).classList.add('active');
+            if(viewName === 'archives') renderArchives();
+            if(viewName === 'enquetes') renderEnquetes();
+            if(viewName === 'arrestations') renderArrestations();
+        });
+    });
+
+    // 2. BUILD INFRACTIONS LIST
+    const container = document.getElementById('infractions-container');
+    infractionsData.forEach((cat, idx) => {
+        const catDiv = document.createElement('div');
+        
+        const catTitle = document.createElement('div');
+        catTitle.className = 'cat-title';
+        catTitle.innerText = `▶ ${cat.cat}`;
+        
+        const listDiv = document.createElement('div');
+        listDiv.className = 'infraction-list';
+        listDiv.id = `cat-${idx}`;
+        if(idx === 0) listDiv.classList.add('active');
+
+        catTitle.addEventListener('click', () => {
+            listDiv.classList.toggle('active');
+        });
+        
+        catDiv.appendChild(catTitle);
+
+        cat.items.forEach(item => {
+            const label = document.createElement('label');
+            label.className = 'inf-item';
+            
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'inf-checkbox';
+            checkbox.value = JSON.stringify(item);
+            checkbox.addEventListener('change', updateFiche);
+            
+            const span = document.createElement('span');
+            span.innerHTML = `<span class="inf-code">${item.code}</span> ${item.name}`;
+            
+            label.appendChild(checkbox);
+            label.appendChild(span);
+            listDiv.appendChild(label);
+        });
+        catDiv.appendChild(listDiv);
+        container.appendChild(catDiv);
+    });
+
+    // 3. EVENT LISTENERS FOR INPUTS
+    const inputs = ['accuses', 'id', 'date', 'faits', 'preuves'];
+    inputs.forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.addEventListener('input', updateFiche);
+    });
+
+    // 4. BUTTONS
+    document.getElementById('btn-save').addEventListener('click', saveDossier);
+    document.getElementById('btn-copy').addEventListener('click', copyDossier);
+    document.getElementById('btn-print').addEventListener('click', () => window.print());
+    document.getElementById('btn-clear-fiches').addEventListener('click', () => { if(!requireAuth()) return; if(confirm("Purger toutes les fiches ?")) { localStorage.removeItem('konoha_archives'); renderArchives(); }});
+    document.getElementById('btn-clear-enquetes').addEventListener('click', () => { if(!requireAuth()) return; if(confirm("Purger toutes les enquêtes ?")) { localStorage.removeItem('konoha_enquetes'); renderArchives(); }});
+    document.getElementById('btn-clear-arrestations').addEventListener('click', () => { if(!requireAuth()) return; if(confirm("Purger toutes les arrestations ?")) { localStorage.removeItem('konoha_arrestations'); renderArchives(); }});
+    document.getElementById('btn-save-enquete').addEventListener('click', saveEnquete);
+    document.getElementById('btn-save-arrestation').addEventListener('click', saveArrestation);
+
+    // 5. ARCHIVES DELEGATION
+    document.getElementById('archives-list').addEventListener('click', (e) => {
+        if(e.target.classList.contains('btn-view')) viewArchive(e.target.getAttribute('data-id'));
+        if(e.target.classList.contains('btn-delete')) deleteArchive(e.target.getAttribute('data-id'));
+    });
+
+    // 6. ENQUETES DELEGATION
+    document.getElementById('enquetes-list').addEventListener('click', (e) => {
+        if(e.target.classList.contains('btn-delete')) deleteEnquete(e.target.getAttribute('data-id'));
+        if(e.target.classList.contains('btn-close-eq')) closeEnquete(e.target.getAttribute('data-id'));
+    });
+
+    // 7. ARRESTATIONS DELEGATION
+    document.getElementById('arrestations-list').addEventListener('click', (e) => {
+        if(e.target.classList.contains('btn-delete')) deleteArrestation(e.target.getAttribute('data-id'));
+    });
+
+    // Initial render
+    updateFiche();
+});
+
+function updateFiche() {
+    const accuses = document.getElementById('accuses').value;
+    const id = document.getElementById('id').value;
+    const date = document.getElementById('date').value;
+    const faits = document.getElementById('faits').value;
+    const preuves = document.getElementById('preuves').value;
+
+    document.getElementById('f-accuses').innerText = accuses || "N/A";
+    document.getElementById('f-id').innerText = id || "N/A";
+    document.getElementById('f-date').innerText = date || "N/A";
+    document.getElementById('f-faits').innerText = faits || "Aucun fait saisi.";
+    document.getElementById('f-preuves').innerText = preuves || "Aucune preuve saisie.";
+
+    const checkboxes = document.querySelectorAll('.inf-checkbox:checked');
+    const fInfractions = document.getElementById('f-infractions');
+    const fPeines = document.getElementById('f-peines');
+
+    fInfractions.innerHTML = ''; fPeines.innerHTML = '';
+    currentScore = 0;
+
+    if(checkboxes.length === 0) {
+        fInfractions.innerHTML = '<li style="color:#999; font-weight:normal;">Aucune infraction sélectionnée.</li>';
+        fPeines.innerHTML = '<li style="color:#999; font-weight:normal;">Aucune peine calculée.</li>';
+        return;
+    }
+
+    let totalRyos = 0, totalCellule = 0, totalAvertissements = 0, totalSignalements = 0, totalTig = 0;
+    let flags = { jugement: false, detention: false, execution: false, retrogradation: false, confiscation: false, amendesVariables: false, reparation: false, bandeau: false, traque: false };
+
+    checkboxes.forEach(cb => {
+        const item = JSON.parse(cb.value);
+        const li = document.createElement('li');
+        li.innerHTML = `<span style="color:var(--accent-red)">[${item.code}]</span> ${item.name}`;
+        fInfractions.appendChild(li);
+        
+        if (item.ryos) totalRyos += item.ryos;
+        if (item.cellule) totalCellule += item.cellule;
+        if (item.type.includes("avertissement")) totalAvertissements += 1;
+        if (item.type.includes("signalement")) totalSignalements += 1;
+        if (item.type.includes("tig")) totalTig += 1;
+        if (item.type.includes("jugement")) flags.jugement = true;
+        if (item.type.includes("detention")) flags.detention = true;
+        if (item.type.includes("execution")) flags.execution = true;
+        if (item.type.includes("retrogradation") || item.retrogradation_potentiel) flags.retrogradation = true;
+        if (item.type.includes("confiscation")) flags.confiscation = true;
+        if (item.type.includes("amendes_variables")) flags.amendesVariables = true;
+        if (item.type.includes("reparation")) flags.reparation = true;
+        if (item.type.includes("bandeau")) flags.bandeau = true;
+        if (item.type.includes("traque")) flags.traque = true;
+        
+        // Gravity Calculation
+        if(item.code.startsWith("A")) currentScore += 1000;
+        if(item.code.startsWith("B")) currentScore += 100;
+        if(item.code.startsWith("C")) currentScore += 10;
+    });
+
+    totalSignalements += Math.floor(totalAvertissements / 2);
+    totalAvertissements = totalAvertissements % 2;
+
+    const addPeine = (text) => {
+        const li = document.createElement('li');
+        li.innerText = text;
+        fPeines.appendChild(li);
+    }
+
+    if (flags.execution) addPeine("❌ EXÉCUTION");
+    if (flags.detention) addPeine("🔒 DÉTENTION (jusqu'au jugement)");
+    if (flags.jugement) addPeine("⚖️ JUGEMENT REQUIS (Instruction ou Autorité)");
+    if (flags.traque) addPeine("🎯 TRAQUE DÉCLENCHÉE");
+    if (totalSignalements > 0) addPeine(`⚠️ SIGNALEMENT(S) : ${totalSignalements} (Exclusion examens / Rétrogradation)`);
+    if (totalAvertissements > 0) addPeine(`⚠️ AVERTISSEMENT(S) : ${totalAvertissements}`);
+    if (totalCellule > 0) addPeine(`⛓️ TEMPS DE CELLULE : ${totalCellule} minutes`);
+    if (totalRyos > 0) addPeine(`💰 AMENDE : ${totalRyos} Ryos` + (flags.amendesVariables ? ` + Variables` : ""));
+    else if (flags.amendesVariables) addPeine("💰 AMENDE : Variable selon dégradations");
+    if (totalTig > 0) addPeine(`🧹 TIG : ${totalTig} séance(s)`);
+    if (flags.confiscation) addPeine("📦 CONFISCATION REQUISE");
+    if (flags.retrogradation) addPeine("📉 RÉTROGRADATION REQUISE / POTENTIELLE");
+    if (flags.reparation) addPeine("🔨 RÉPARATION DES DÉGÂTS REQUISE");
+    if (flags.bandeau) addPeine("🛑 DROIT DE RETIRER LE BANDEAU");
+}
+
+function saveDossier() {
+    const accuses = document.getElementById('accuses').value;
+    if(!accuses) return alert("Veuillez saisir un nom d'accusé avant d'enregistrer.");
+    
+    const dossier = {
+        id: Date.now().toString(),
+        dateCreated: new Date().toLocaleDateString('fr-FR') + " " + new Date().toLocaleTimeString('fr-FR'),
+        accuses: accuses,
+        dateFaits: document.getElementById('date').value,
+        score: currentScore,
+        htmlContent: document.getElementById('fiche').innerHTML
+    };
+
+    let archives = JSON.parse(localStorage.getItem('konoha_archives') || '[]');
+    archives.push(dossier);
+    localStorage.setItem('konoha_archives', JSON.stringify(archives));
+
+    alert("✅ Dossier sauvegardé dans les archives !");
+    
+    // Reset form
+    document.getElementById('accuses').value = '';
+    document.getElementById('id').value = '';
+    document.getElementById('date').value = '';
+    document.getElementById('faits').value = '';
+    document.getElementById('preuves').value = '';
+    
+    document.querySelectorAll('.inf-checkbox').forEach(el => el.checked = false);
+    updateFiche();
+}
+
+function renderArchives() {
+    // === FICHES ===
+    const fichesList = document.getElementById('archives-fiches-list');
+    fichesList.innerHTML = '';
+    let fiches = JSON.parse(localStorage.getItem('konoha_archives') || '[]');
+    if(fiches.length === 0) { fichesList.innerHTML = '<p style="color:#999;">Aucune fiche enregistrée.</p>'; }
+    else {
+        fiches.sort((a, b) => b.score - a.score);
+        fiches.forEach(dossier => {
+            let scoreClass = 'score-low', gravityText = 'Délit Mineur';
+            if(dossier.score >= 1000) { scoreClass = 'score-high'; gravityText = 'CRIME MAJEUR'; }
+            else if(dossier.score >= 100) { scoreClass = 'score-med'; gravityText = 'Délit Majeur'; }
+            const card = document.createElement('div');
+            card.className = 'record-card';
+            card.innerHTML = `<div><h4>${dossier.accuses || 'Inconnu'} <span class="status-badge ${scoreClass}">${gravityText}</span></h4><p>Créée le: ${dossier.dateCreated} | Faits: ${dossier.dateFaits || 'N/A'}</p></div><div><button class="btn-view" data-id="${dossier.id}" style="background:var(--primary-light);color:white;border:none;padding:8px 12px;border-radius:4px;cursor:pointer;font-weight:bold;margin-left:5px;">Voir</button><button class="btn-delete-fiche" data-id="${dossier.id}" style="background:#ffebee;color:#c62828;border:none;padding:8px 12px;border-radius:4px;cursor:pointer;font-weight:bold;margin-left:5px;">Supprimer</button></div>`;
+            fichesList.appendChild(card);
+        });
+    }
+
+    // === ENQUETES ===
+    const eqList = document.getElementById('archives-enquetes-list');
+    eqList.innerHTML = '';
+    let enquetes = JSON.parse(localStorage.getItem('konoha_enquetes') || '[]');
+    if(enquetes.length === 0) { eqList.innerHTML = '<p style="color:#999;">Aucune enquête enregistrée.</p>'; }
+    else {
+        enquetes.sort((a,b) => { const p = {urgente:3,haute:2,normale:1}; return (p[b.priorite]||0) - (p[a.priorite]||0); });
+        enquetes.forEach(eq => {
+            const prioClass = eq.priorite === 'urgente' ? 'status-urgent' : eq.priorite === 'haute' ? 'status-open' : 'status-closed';
+            const statutClass = eq.statut === 'ouverte' ? 'status-open' : 'status-closed';
+            const card = document.createElement('div');
+            card.className = 'record-card';
+            card.innerHTML = `<div><h4>${eq.numero} — ${eq.objet || 'Sans objet'} <span class="status-badge ${prioClass}">${eq.priorite.toUpperCase()}</span> <span class="status-badge ${statutClass}">${eq.statut.toUpperCase()}</span></h4><p>Enquêteur: ${eq.enqueteur || 'N/A'} | Suspects: ${eq.suspects || 'N/A'} | Date: ${eq.date || eq.dateCreated}</p></div>`;
+            eqList.appendChild(card);
+        });
+    }
+
+    // === ARRESTATIONS ===
+    const arList = document.getElementById('archives-arrestations-list');
+    arList.innerHTML = '';
+    let arrestations = JSON.parse(localStorage.getItem('konoha_arrestations') || '[]');
+    if(arrestations.length === 0) { arList.innerHTML = '<p style="color:#999;">Aucune arrestation enregistrée.</p>'; }
+    else {
+        const statutLabels = {garde_a_vue:'Garde à vue',cellule:'En cellule',relache:'Relâché',transfert:'Transféré'};
+        const statutColors = {garde_a_vue:'status-urgent',cellule:'status-open',relache:'status-closed',transfert:'status-open'};
+        arrestations.forEach(ar => {
+            const card = document.createElement('div');
+            card.className = 'record-card';
+            card.innerHTML = `<div><h4>${ar.nom} <span class="status-badge ${statutColors[ar.statut] || 'status-open'}">${statutLabels[ar.statut] || ar.statut}</span></h4><p>Date: ${ar.date || ar.dateCreated} | Lieu: ${ar.lieu || 'N/A'} | Motif: ${ar.motif || 'N/A'}</p></div>`;
+            arList.appendChild(card);
+        });
+    }
+
+    // Delegation for archive fiches
+    fichesList.addEventListener('click', (e) => {
+        if(e.target.classList.contains('btn-view')) viewArchive(e.target.getAttribute('data-id'));
+        if(e.target.classList.contains('btn-delete-fiche')) deleteArchive(e.target.getAttribute('data-id'));
+    });
+}
+
+function viewArchive(id) {
+    let archives = JSON.parse(localStorage.getItem('konoha_archives') || '[]');
+    const dossier = archives.find(d => d.id === id);
+    if(dossier) {
+        document.getElementById('fiche').innerHTML = dossier.htmlContent;
+        document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+        document.getElementById('view-new').classList.add('active');
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById('tab-new').classList.add('active');
+    }
+}
+
+function deleteArchive(id) {
+    if(confirm("Supprimer cette fiche ?")) {
+        let archives = JSON.parse(localStorage.getItem('konoha_archives') || '[]');
+        archives = archives.filter(d => d.id !== id);
+        localStorage.setItem('konoha_archives', JSON.stringify(archives));
+        renderArchives();
+    }
+}
+
+function copyDossier() {
+    const text = `🛡️ POLICE MILITAIRE DE KONOHA 🛡️\nDOSSIER JUDICIAIRE OFFICIEL\n\nACCUSÉ(S) : ${document.getElementById('f-accuses').innerText}\nIDENTITÉ : ${document.getElementById('f-id').innerText}\nLIEU/DATE : ${document.getElementById('f-date').innerText}\n\nFAITS REPROCHÉS :\n${document.getElementById('f-faits').innerText}\n\nTÉMOINS / PREUVES :\n${document.getElementById('f-preuves').innerText}\n\n📋 INFRACTIONS RETENUES :\n${Array.from(document.getElementById('f-infractions').children).map(li => "- " + li.innerText).join('\n')}\n\n⚖️ PEINES RECOMMANDÉES :\n${Array.from(document.getElementById('f-peines').children).map(li => "- " + li.innerText).join('\n')}`;
+    navigator.clipboard.writeText(text).then(() => alert("✅ Dossier copié dans le presse-papier !"));
+}
+
+// ==================== ENQUETES ====================
+function saveEnquete() {
+    const numero = document.getElementById('eq-numero').value;
+    if(!numero) return alert("Veuillez saisir un numéro de dossier.");
+    const eq = {
+        id: Date.now().toString(),
+        numero: numero,
+        date: document.getElementById('eq-date').value,
+        enqueteur: document.getElementById('eq-enqueteur').value,
+        priorite: document.getElementById('eq-priorite').value,
+        suspects: document.getElementById('eq-suspects').value,
+        objet: document.getElementById('eq-objet').value,
+        pistes: document.getElementById('eq-pistes').value,
+        notes: document.getElementById('eq-notes').value,
+        statut: 'ouverte',
+        dateCreated: new Date().toLocaleDateString('fr-FR')
+    };
+    let list = JSON.parse(localStorage.getItem('konoha_enquetes') || '[]');
+    list.push(eq);
+    localStorage.setItem('konoha_enquetes', JSON.stringify(list));
+    alert("✅ Enquête enregistrée !");
+    ['eq-numero','eq-date','eq-enqueteur','eq-suspects','eq-objet','eq-pistes','eq-notes'].forEach(id => document.getElementById(id).value = '');
+    renderEnquetes();
+}
+
+function renderEnquetes() {
+    const container = document.getElementById('enquetes-list');
+    container.innerHTML = '';
+    let list = JSON.parse(localStorage.getItem('konoha_enquetes') || '[]');
+    if(list.length === 0) { container.innerHTML = '<p style="color:#999;">Aucune enquête enregistrée.</p>'; return; }
+    list.sort((a,b) => { const p = {urgente:3,haute:2,normale:1}; return (p[b.priorite]||0) - (p[a.priorite]||0); });
+    list.forEach(eq => {
+        const prioClass = eq.priorite === 'urgente' ? 'status-urgent' : eq.priorite === 'haute' ? 'status-open' : 'status-closed';
+        const statutClass = eq.statut === 'ouverte' ? 'status-open' : 'status-closed';
+        const card = document.createElement('div');
+        card.className = 'record-card';
+        card.style.borderLeft = eq.priorite === 'urgente' ? '5px solid #c62828' : eq.priorite === 'haute' ? '5px solid #ef6c00' : '5px solid #2e7d32';
+        card.innerHTML = `
+            <div>
+                <h4>${eq.numero} — ${eq.objet || 'Sans objet'} <span class="status-badge ${prioClass}">${eq.priorite.toUpperCase()}</span> <span class="status-badge ${statutClass}">${eq.statut.toUpperCase()}</span></h4>
+                <p>Enquêteur: ${eq.enqueteur || 'N/A'} | Suspects: ${eq.suspects || 'N/A'} | Ouvert le: ${eq.date || eq.dateCreated}</p>
+                <p style="margin-top:5px;">Pistes: ${eq.pistes || 'Aucune'}</p>
+                ${eq.notes ? '<p style="margin-top:5px;font-style:italic;">Notes: '+eq.notes+'</p>' : ''}
+            </div>
+            <div>
+                ${eq.statut === 'ouverte' ? '<button class="btn-close-eq" data-id="'+eq.id+'" style="background:#2e7d32;color:white;border:none;padding:8px 12px;border-radius:4px;cursor:pointer;font-weight:bold;margin-left:5px;">Clôturer</button>' : ''}
+                <button class="btn-delete" data-id="${eq.id}" style="background:#ffebee;color:#c62828;border:none;padding:8px 12px;border-radius:4px;cursor:pointer;font-weight:bold;margin-left:5px;">Supprimer</button>
+            </div>`;
+        container.appendChild(card);
+    });
+}
+
+function closeEnquete(id) {
+    let list = JSON.parse(localStorage.getItem('konoha_enquetes') || '[]');
+    const eq = list.find(e => e.id === id);
+    if(eq) { eq.statut = 'classée'; localStorage.setItem('konoha_enquetes', JSON.stringify(list)); renderEnquetes(); }
+}
+
+function deleteEnquete(id) {
+    if(confirm("Supprimer cette enquête ?")) {
+        let list = JSON.parse(localStorage.getItem('konoha_enquetes') || '[]');
+        list = list.filter(e => e.id !== id);
+        localStorage.setItem('konoha_enquetes', JSON.stringify(list));
+        renderEnquetes();
+    }
+}
+
+// ==================== ARRESTATIONS ====================
+function saveArrestation() {
+    const nom = document.getElementById('ar-nom').value;
+    if(!nom) return alert("Veuillez saisir le nom de l'individu arrêté.");
+    const ar = {
+        id: Date.now().toString(),
+        nom: nom,
+        date: document.getElementById('ar-date').value,
+        lieu: document.getElementById('ar-lieu').value,
+        agents: document.getElementById('ar-agents').value,
+        enquete: document.getElementById('ar-enquete').value,
+        statut: document.getElementById('ar-statut').value,
+        motif: document.getElementById('ar-motif').value,
+        objets: document.getElementById('ar-objets').value,
+        rapport: document.getElementById('ar-rapport').value,
+        dateCreated: new Date().toLocaleDateString('fr-FR')
+    };
+    let list = JSON.parse(localStorage.getItem('konoha_arrestations') || '[]');
+    list.push(ar);
+    localStorage.setItem('konoha_arrestations', JSON.stringify(list));
+    alert("✅ Arrestation enregistrée !");
+    ['ar-nom','ar-date','ar-lieu','ar-agents','ar-enquete','ar-motif','ar-objets','ar-rapport'].forEach(id => document.getElementById(id).value = '');
+    renderArrestations();
+}
+
+function renderArrestations() {
+    const container = document.getElementById('arrestations-list');
+    container.innerHTML = '';
+    let list = JSON.parse(localStorage.getItem('konoha_arrestations') || '[]');
+    if(list.length === 0) { container.innerHTML = '<p style="color:#999;">Aucune arrestation enregistrée.</p>'; return; }
+    list.reverse();
+    const statutLabels = {garde_a_vue:'Garde à vue',cellule:'En cellule',relache:'Relâché',transfert:'Transféré'};
+    const statutColors = {garde_a_vue:'status-urgent',cellule:'status-open',relache:'status-closed',transfert:'status-open'};
+    list.forEach(ar => {
+        const card = document.createElement('div');
+        card.className = 'record-card';
+        card.style.borderLeft = ar.statut === 'relache' ? '5px solid #2e7d32' : '5px solid #c62828';
+        card.innerHTML = `
+            <div>
+                <h4>${ar.nom} <span class="status-badge ${statutColors[ar.statut] || 'status-open'}">${statutLabels[ar.statut] || ar.statut}</span></h4>
+                <p>Date: ${ar.date || ar.dateCreated} | Lieu: ${ar.lieu || 'N/A'} | Agent(s): ${ar.agents || 'N/A'}</p>
+                <p style="margin-top:5px;">Motif: ${ar.motif || 'Non renseigné'}</p>
+                ${ar.enquete ? '<p style="margin-top:3px;">Enquête liée: '+ar.enquete+'</p>' : ''}
+                ${ar.objets ? '<p style="margin-top:3px;">Objets saisis: '+ar.objets+'</p>' : ''}
+            </div>
+            <div>
+                <button class="btn-delete" data-id="${ar.id}" style="background:#ffebee;color:#c62828;border:none;padding:8px 12px;border-radius:4px;cursor:pointer;font-weight:bold;">Supprimer</button>
+            </div>`;
+        container.appendChild(card);
+    });
+}
+
+function deleteArrestation(id) {
+    if(confirm("Supprimer cette arrestation ?")) {
+        let list = JSON.parse(localStorage.getItem('konoha_arrestations') || '[]');
+        list = list.filter(a => a.id !== id);
+        localStorage.setItem('konoha_arrestations', JSON.stringify(list));
+        renderArrestations();
+    }
+}
+</script>
+
+</body>
+</html>
